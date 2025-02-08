@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Square Solver</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        input {
+            padding: 5px;
+            margin: 5px;
+            width: 100px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        .grid-cell {
+            border: 1px solid #ddd;
+            padding: 10px;
+            min-width: 50px;
+            height: 50px;
+            text-align: center;
+            background-color: #f9f9f9;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+        }
+        .team-members {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+        }
+        .instructions {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tạo bảng vuông với tổng hàng/cột</h1>
+        <div class="instructions">
+            <p><strong>Hướng dẫn sử dụng:</strong></p>
+            <p>1. Nhập kích thước bảng (n) từ 1 đến 5.</p>
+            <p>2. Nhập tổng mong muốn cho mỗi hàng và cột.</p>
+            <p>3. Nhấn "Tạo bảng" để tạo bảng vuông.</p>
+            <p>4. Nhấn "Giải" để tìm giải pháp.</p>
+        </div>
+        <div class="input-group">
+            <label>Kích thước (n): </label>
+            <input type="number" id="nInput" min="1" max="5" value="3">
+        </div>
+        <div class="input-group">
+            <label>Tổng mong muốn: </label>
+            <input type="number" id="targetInput">
+        </div>
+        <button onclick="generateGrid()">Tạo bảng</button>
+        <button onclick="solve()">Giải</button>
+        <div id="gridContainer"></div>
+        <div id="errorMessage" class="error"></div>
+        <div class="team-members">
+            <p>Thành viên nhóm: Huỳnh Nguyễn, Dương Bình An, Hùng Phát - Lớp 11A3</p>
+        </div>
+    </div>
+
+    <script>
+        function generateGrid() {
+            const n = parseInt(document.getElementById('nInput').value);
+            if (n > 5 || n < 1) {
+                showError('n phải từ 1 đến 5');
+                return;
+            }
+            const gridContainer = document.getElementById('gridContainer');
+            gridContainer.innerHTML = '';
+            
+            const table = document.createElement('table');
+            for (let i = 0; i < n; i++) {
+                const row = table.insertRow();
+                for (let j = 0; j < n; j++) {
+                    const cell = row.insertCell();
+                    cell.className = 'grid-cell';
+                    cell.textContent = '';
+                }
+            }
+            gridContainer.appendChild(table);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            setTimeout(() => errorDiv.textContent = '', 3000);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function findSolution(n, target) {
+            const usedNumbers = new Set();
+            const grid = Array.from({ length: n }, () => Array(n).fill(0));
+            const rowSums = Array(n).fill(0);
+            const colSums = Array(n).fill(0);
+
+            const startTime = Date.now();
+            let timeout = false;
+
+            function backtrack(i, j) {
+                if (Date.now() - startTime > 10000) {
+                    timeout = true;
+                    return false;
+                }
+
+                if (i === n) {
+                    return colSums.every(sum => sum === target);
+                }
+
+                const nextI = j === n - 1 ? i + 1 : i;
+                const nextJ = j === n - 1 ? 0 : j + 1;
+
+                const numbers = [];
+                for (let num = 1; num <= 99; num++) {
+                    if (!usedNumbers.has(num)) numbers.push(num);
+                }
+                shuffle(numbers);
+
+                for (const num of numbers) {
+                    if (rowSums[i] + num > target || colSums[j] + num > target) continue;
+                    if (j === n - 1 && rowSums[i] + num !== target) continue;
+                    if (i === n - 1 && colSums[j] + num !== target) continue;
+
+                    usedNumbers.add(num);
+                    grid[i][j] = num;
+                    rowSums[i] += num;
+                    colSums[j] += num;
+
+                    if (backtrack(nextI, nextJ)) {
+                        return true;
+                    }
+
+                    usedNumbers.delete(num);
+                    grid[i][j] = 0;
+                    rowSums[i] -= num;
+                    colSums[j] -= num;
+                }
+
+                return false;
+            }
+
+            return backtrack(0, 0) ? grid : null;
+        }
+
+        function solve() {
+            const n = parseInt(document.getElementById('nInput').value);
+            const target = parseInt(document.getElementById('targetInput').value);
+            
+            if (!n || !target) {
+                showError('Vui lòng nhập đủ thông tin');
+                return;
+            }
+
+            const minSum = (n * (n + 1)) / 2;
+            const maxSum = (99 + (100 - n)) * n / 2;
+            if (target < minSum || target > maxSum) {
+                showError(`Tổng phải từ ${minSum} đến ${maxSum}`);
+                return;
+            }
+
+            let timeout = false;
+            const startTime = Date.now();
+
+            setTimeout(() => {
+                if (timeout) {
+                    showError('Không thể tìm thấy giải pháp trong 10 giây.');
+                }
+            }, 10000);
+
+            const solution = findSolution(n, target);
+            if (!solution) {
+                showError('Không tìm thấy giải pháp.');
+                return;
+            }
+
+            const gridCells = document.querySelectorAll('.grid-cell');
+            let index = 0;
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) {
+                    gridCells[index].textContent = solution[i][j];
+                    index++;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
